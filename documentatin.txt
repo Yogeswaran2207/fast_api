@@ -1,0 +1,2621 @@
+Module 1: FastAPI Basics
+1. Introduction
+
+FastAPI is a modern, high-performance Python framework for building APIs.
+It’s built on Starlette for the web parts and Pydantic for data validation.
+
+Key advantages:
+
+Fast to code (high developer productivity)
+
+Fast execution (high performance)
+
+Automatic API docs (/docs and /redoc)
+
+Data validation using Pydantic
+
+Dependency injection system
+
+2. Installation
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+# Install FastAPI
+pip install fastapi
+
+# Install ASGI server (Uvicorn)
+pip install "uvicorn[standard]"
+
+# Optional: Install SQLModel if using DB
+pip install sqlmodel
+
+3. Creating a FastAPI Application
+# app.py
+from fastapi import FastAPI
+
+# Create the FastAPI app instance
+app = FastAPI(
+    title="My FastAPI App",
+    description="This is a sample FastAPI application.",
+    version="1.0.0"
+)
+
+# Define a simple root endpoint
+@app.get("/")
+def read_root():
+    return {"message": "Hello, FastAPI!"}
+
+
+Explanation:
+
+FastAPI() creates the app object.
+
+@app.get("/") is a path operation decorator, mapping an HTTP GET request to the function.
+
+The function returns a dictionary, which FastAPI automatically converts to JSON.
+
+4. App Attributes
+
+The FastAPI app has useful attributes:
+
+app.title → The title of your API
+
+app.description → Description of the API
+
+app.version → Version number
+
+app.openapi() → Returns the OpenAPI schema
+
+app.routes → List of all routes
+
+app.include_router() → Include routes from separate files
+
+print(app.title)         # My FastAPI App
+print(app.routes)        # Shows all route info
+
+5. Running the Server
+# Run the app using Uvicorn
+uvicorn app:app --reload
+
+
+Explanation:
+
+app:app → <filename>:<FastAPI instance>
+
+--reload → Automatically reloads server on code change (dev only)
+
+After running, visit:
+
+http://127.0.0.1:8000/ → Root endpoint
+
+http://127.0.0.1:8000/docs → Swagger UI documentation
+
+http://127.0.0.1:8000/redoc → ReDoc documentation
+
+6. Routers
+
+Routers allow splitting endpoints into modular files.
+
+Example:
+
+# users_router.py
+from fastapi import APIRouter
+
+user_router = APIRouter(prefix="/users", tags=["Users"])
+
+@user_router.get("/")
+def get_users():
+    return [{"id": 1, "name": "Alice"}]
+
+@user_router.get("/{user_id}")
+def get_user(user_id: int):
+    return {"id": user_id, "name": "Alice"}
+
+
+Include the router in the main app:
+
+# app.py
+from fastapi import FastAPI
+from users_router import user_router
+
+app = FastAPI()
+app.include_router(user_router)
+
+
+Explanation:
+
+APIRouter() allows grouping endpoints.
+
+prefix="/users" → all endpoints will start with /users.
+
+tags=["Users"] → Used in API docs.
+
+app.include_router(user_router) → Adds the router to the main app.
+
+Best Practices:
+
+Use routers for modular code (users, products, auth, etc.)
+
+Keep related endpoints together
+
+Always add tags for documentation clarity
+
+7. Tips & Best Practices
+
+Always use a virtual environment.
+
+Use routers for modular code structure.
+
+Use type hints (FastAPI relies on them for validation).
+
+Use --reload only in development.
+
+Keep your app object in a single file (main.py or app.py) for clarity.
+
+Add title, version, and description to improve docs readability.
+
+Check routes: print(app.routes) helps debugging.
+
+Use Swagger (/docs) for interactive API testing.
+
+8. Summary
+
+FastAPI app is created using FastAPI().
+
+Routes are defined with decorators like @app.get().
+
+Routers help in modular code design.
+
+Automatic docs (/docs, /redoc) are provided out of the box.
+
+Uvicorn is the recommended ASGI server.
+
+✅ Next Steps: Module 2 will cover Path Parameters, Query Parameters, and Request Body with examples and validation.
+
+I can continue and generate Module 2 next in the same detailed style.
+
+Do you want me to proceed with Module 2?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s move to Module 2: Path Parameters, Query Parameters, and Request Body with full explanations, imports, code, and best practices.
+
+Module 2: Path Parameters, Query Parameters, and Request Body
+1. Introduction
+
+FastAPI allows you to handle different types of HTTP request data:
+
+Path parameters – values embedded in the URL path.
+
+Query parameters – values in the URL after ?.
+
+Request body – JSON payload sent in POST, PUT, or PATCH requests.
+
+These are crucial for building dynamic APIs.
+
+2. Path Parameters
+
+Path parameters allow capturing variable parts of the URL.
+
+Example:
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/users/{user_id}")
+def read_user(user_id: int):
+    return {"user_id": user_id}
+
+
+Explanation:
+
+{user_id} in the path becomes a parameter in the function.
+
+Type hints (int) automatically validate the data.
+
+FastAPI returns 422 if the type does not match.
+
+Advanced Example (Multiple Path Parameters):
+
+@app.get("/users/{user_id}/items/{item_id}")
+def read_user_item(user_id: int, item_id: str):
+    return {"user_id": user_id, "item_id": item_id}
+
+
+Tips:
+
+Path parameters are required.
+
+Always add type hints for automatic validation.
+
+3. Query Parameters
+
+Query parameters come after ? in URLs.
+
+Example:
+
+@app.get("/items/")
+def read_items(skip: int = 0, limit: int = 10):
+    return {"skip": skip, "limit": limit}
+
+
+Explanation:
+
+URL example: /items/?skip=5&limit=20
+
+Default values are optional (skip=0, limit=10)
+
+Type hints (int) ensure proper data types
+
+Optional Parameters:
+
+from typing import Optional
+
+@app.get("/search/")
+def search_items(q: Optional[str] = None):
+    return {"query": q}
+
+
+Tips:
+
+Use Optional for parameters that are not required.
+
+Query parameters are automatically validated by type hints.
+
+4. Request Body
+
+For POST/PUT/PATCH requests, data is usually sent in the body as JSON.
+
+Example:
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+@app.post("/items/")
+def create_item(item: Item):
+    return {"item": item}
+
+
+Explanation:
+
+Item is a Pydantic model (explained in detail in Module 3)
+
+FastAPI automatically parses JSON body into Item object
+
+Type validation and default values are applied automatically
+
+Partial Example with Path & Body Combined:
+
+@app.put("/users/{user_id}")
+def update_user(user_id: int, item: Item):
+    return {"user_id": user_id, "updated_item": item}
+
+
+Tips:
+
+Use Pydantic models for request bodies.
+
+Combine path, query, and body parameters in the same function if needed.
+
+FastAPI prioritizes path parameters over query/body parameters when resolving conflicts.
+
+5. Combining Path, Query, and Body
+@app.post("/users/{user_id}/items/")
+def create_user_item(
+    user_id: int,
+    item: Item,
+    q: str | None = None  # optional query param
+):
+    return {"user_id": user_id, "item": item, "query": q}
+
+
+Explanation:
+
+user_id → path
+
+item → body
+
+q → query
+
+FastAPI handles all three types seamlessly.
+
+6. Best Practices
+
+Always use type hints for validation.
+
+Use Pydantic models for complex request bodies.
+
+Default values make query params optional.
+
+Keep path parameters meaningful (e.g., /users/{user_id}).
+
+Combine path, query, and body carefully to avoid confusion.
+
+Validate request body thoroughly with Pydantic validators (Module 3).
+
+7. Commands & Testing
+
+Run the app:
+
+uvicorn app:app --reload
+
+
+Test Path & Query Parameters:
+
+Path: http://127.0.0.1:8000/users/10
+
+Query: http://127.0.0.1:8000/items/?skip=5&limit=20
+
+Body: POST /items/ with JSON:
+
+{
+  "name": "Book",
+  "description": "A fastapi guide",
+  "price": 15.5,
+  "tax": 1.5
+}
+
+
+Check API docs:
+
+Swagger: http://127.0.0.1:8000/docs
+
+ReDoc: http://127.0.0.1:8000/redoc
+
+8. Summary
+
+Path Parameters → required, part of URL.
+
+Query Parameters → optional/default, after ?.
+
+Request Body → Pydantic models, JSON, POST/PUT/PATCH.
+
+FastAPI validates all types automatically.
+
+Path, query, and body can be combined in a single endpoint.
+
+Test using /docs for interactive testing.
+
+✅ Next Steps: Module 3 will cover Pydantic Schemas, Validation, Response Models, and HTTP Exceptions with examples and best practices.
+
+I can continue and create Module 3 next in the same detailed, long-form style.
+
+Do you want me to proceed with Module 3?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s move to Module 3: Pydantic Schemas, Validation, Response Models, and HTTP Exceptions in the same long-form, detailed style.
+
+Module 3: Pydantic Schemas, Validation, Response Models, and HTTP Exceptions
+1. Introduction
+
+FastAPI heavily relies on Pydantic for data validation and serialization. Pydantic models (schemas) define the shape of request and response data, automatically validating inputs and converting Python objects to JSON.
+
+This module covers:
+
+Creating schemas using Pydantic
+
+Validation (types, constraints, optional fields)
+
+Response models
+
+Raising HTTP exceptions for errors
+
+2. Pydantic Schemas
+
+Schemas define the expected structure of data in requests and responses.
+
+Basic Example:
+
+from pydantic import BaseModel
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+
+Explanation:
+
+BaseModel → all Pydantic models inherit from this.
+
+Type hints enforce validation.
+
+Optional fields → str | None or Optional[str].
+
+Default values → description: str | None = None.
+
+Creating a FastAPI endpoint using a schema:
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Item(BaseModel):
+    name: str
+    price: float
+    description: str | None = None
+
+@app.post("/items/")
+def create_item(item: Item):
+    return {"item_name": item.name, "item_price": item.price}
+
+
+Testing:
+
+POST /items/ with JSON:
+
+{
+  "name": "Laptop",
+  "price": 1200.50
+}
+
+
+Automatic validation ensures price is a float and name is present.
+
+3. Validation in Pydantic
+
+Common validations:
+
+Required fields → missing raises validation error
+
+Type validation → wrong type raises error
+
+Optional fields → can be None
+
+Advanced Validation:
+
+from pydantic import BaseModel, Field, validator
+
+class Product(BaseModel):
+    name: str = Field(..., min_length=3, max_length=50)
+    price: float = Field(..., gt=0)  # greater than 0
+    description: str | None = Field(None, max_length=200)
+
+    @validator("name")
+    def name_must_be_alphanumeric(cls, v):
+        if not v.replace(" ", "").isalnum():
+            raise ValueError("Name must be alphanumeric")
+        return v
+
+
+Explanation:
+
+Field(...) → required field
+
+min_length, max_length, gt → enforce constraints
+
+@validator → custom validation logic
+
+FastAPI automatically returns 422 Unprocessable Entity if validation fails.
+
+4. Response Models
+
+Response models ensure the API returns structured data.
+
+Example:
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class ItemOut(BaseModel):
+    name: str
+    price: float
+
+class ItemIn(BaseModel):
+    name: str
+    price: float
+    description: str | None = None
+
+@app.post("/items/", response_model=ItemOut)
+def create_item(item: ItemIn):
+    return item  # will only return fields in ItemOut
+
+
+Explanation:
+
+response_model controls what is returned
+
+Extra fields in ItemIn (like description) are excluded in the response
+
+Helps separate input schema and output schema
+
+Advanced Tips:
+
+Use response_model_exclude_unset=True to exclude default values.
+
+Use response_model_include or response_model_exclude to customize output.
+
+5. HTTP Exceptions
+
+FastAPI allows you to handle errors gracefully using HTTPException.
+
+Example:
+
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+fake_db = {"item1": {"name": "Laptop", "price": 1200}}
+
+@app.get("/items/{item_id}")
+def read_item(item_id: str):
+    if item_id not in fake_db:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return fake_db[item_id]
+
+
+Explanation:
+
+HTTPException → returns structured error JSON:
+
+{
+  "detail": "Item not found"
+}
+
+
+status_code → HTTP status
+
+detail → custom error message
+
+Advanced Example with Headers:
+
+from fastapi import Header
+
+@app.get("/header_test/")
+def header_test(x_token: str | None = Header(None)):
+    if x_token != "secret":
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    return {"X-Token": x_token}
+
+6. Combining Schemas and Exceptions
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class User(BaseModel):
+    username: str
+    email: str
+
+fake_db = {"john": {"username": "john", "email": "john@example.com"}}
+
+@app.get("/users/{username}", response_model=User)
+def get_user(username: str):
+    if username not in fake_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    return fake_db[username]
+
+
+Combines validation, response model, and exception handling.
+
+Ensures input and output are structured, and errors are meaningful.
+
+7. Best Practices
+
+Separate schemas for input and output:
+
+Input schema → for requests
+
+Output schema → for responses (hides sensitive info like passwords)
+
+Always use type hints → ensures automatic validation
+
+Custom validators → enforce business rules
+
+Use HTTPException → handle errors consistently
+
+Document default values and optional fields → for API clarity
+
+8. Commands & Testing
+
+Run app:
+
+uvicorn app:app --reload
+
+
+Test endpoints:
+
+Swagger UI → http://127.0.0.1:8000/docs
+
+ReDoc → http://127.0.0.1:8000/redoc
+
+Test with curl or Postman:
+
+curl -X POST "http://127.0.0.1:8000/items/" -H "Content-Type: application/json" -d '{"name": "Laptop", "price": 1200}'
+
+9. Summary
+
+Pydantic Schemas → structure requests and responses
+
+Validation → type checking, default values, constraints, custom validators
+
+Response models → control returned data
+
+HTTP Exceptions → structured error handling
+
+Combines seamlessly with FastAPI endpoints for robust API development.
+
+✅ Next Module: Module 4 – SQLModel and SQLAlchemy: Setup, Engine, Session, and CRUD operations
+
+I can continue with Module 4 next.
+
+Do you want me to proceed with Module 4 now?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s dive into Module 4: SQLModel and SQLAlchemy – Setup, Engine, Session, and CRUD Operations in the same detailed, step-by-step style.
+
+Module 4: SQLModel and SQLAlchemy – Setup, Engine, Session, and CRUD Operations
+1. Introduction
+
+FastAPI works seamlessly with SQLModel (built on SQLAlchemy) for database operations. SQLModel combines SQLAlchemy ORM capabilities with Pydantic validation, making it ideal for FastAPI apps.
+
+This module covers:
+
+Installing and setting up PostgreSQL
+
+Creating SQLModel models
+
+Creating engine and sessionmaker
+
+CRUD operations: Create, Read, Update, Delete
+
+Integrating models with FastAPI endpoints
+
+2. Installing Required Packages
+pip install fastapi[all] sqlmodel psycopg2-binary
+
+
+fastapi[all] → FastAPI + Uvicorn + Docs
+
+sqlmodel → ORM + Pydantic features
+
+psycopg2-binary → PostgreSQL driver
+
+3. PostgreSQL Setup
+
+Install PostgreSQL:
+
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+
+Start PostgreSQL service:
+
+sudo service postgresql start
+
+
+Create a database and user:
+
+sudo -u postgres psql
+CREATE DATABASE myapp;
+CREATE USER yogesh WITH PASSWORD 'Yogesh1234';
+ALTER ROLE yogesh SET client_encoding TO 'utf8';
+ALTER ROLE yogesh SET default_transaction_isolation TO 'read committed';
+ALTER ROLE yogesh SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE myapp TO yogesh;
+\q
+
+4. SQLModel Model Definition
+
+Example: User model
+
+from sqlmodel import SQLModel, Field
+from typing import Optional
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, nullable=False)
+    email: str = Field(unique=True, nullable=False)
+    is_active: bool = Field(default=True)
+
+
+Explanation:
+
+SQLModel → base class for models
+
+table=True → creates DB table
+
+Field() → defines columns, primary key, index, default, nullable, unique
+
+Optional fields → Optional[int] for auto-incrementing IDs
+
+5. Creating Engine and Session
+
+Engine: connects SQLModel to the database.
+
+from sqlmodel import create_engine, SQLModel, Session
+
+DATABASE_URL = "postgresql+psycopg2://yogesh:Yogesh1234@localhost:5432/myapp"
+engine = create_engine(DATABASE_URL, echo=True)
+
+
+echo=True → logs all SQL statements
+
+create_engine → sets up connection
+
+Session: used for database operations.
+
+from sqlmodel import Session
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+
+Session → context manager handles commit/rollback automatically
+
+yield → works with FastAPI dependency injection
+
+6. Creating Tables
+from sqlmodel import SQLModel
+from models import User  # assume model is in models.py
+
+SQLModel.metadata.create_all(engine)
+
+
+Creates tables based on all SQLModel classes
+
+Should be run once on app startup (or via Alembic for migrations)
+
+7. CRUD Operations
+a. Create User
+from sqlmodel import Session
+from models import User
+
+def create_user(session: Session, username: str, email: str):
+    user = User(username=username, email=email)
+    session.add(user)
+    session.commit()
+    session.refresh(user)  # refresh object with DB data (like ID)
+    return user
+
+b. Read User
+from sqlmodel import select
+
+def get_user_by_id(session: Session, user_id: int):
+    statement = select(User).where(User.id == user_id)
+    user = session.exec(statement).first()
+    return user
+
+c. Update User
+def update_user_email(session: Session, user_id: int, new_email: str):
+    user = get_user_by_id(session, user_id)
+    if user:
+        user.email = new_email
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    return user
+
+d. Delete User
+def delete_user(session: Session, user_id: int):
+    user = get_user_by_id(session, user_id)
+    if user:
+        session.delete(user)
+        session.commit()
+    return user
+
+8. Integrating CRUD with FastAPI Endpoints
+from fastapi import FastAPI, Depends
+from sqlmodel import Session
+from models import User
+from db import get_session  # session dependency
+
+app = FastAPI()
+
+@app.post("/users/")
+def create_user_endpoint(username: str, email: str, session: Session = Depends(get_session)):
+    return create_user(session, username, email)
+
+@app.get("/users/{user_id}")
+def read_user_endpoint(user_id: int, session: Session = Depends(get_session)):
+    user = get_user_by_id(session, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+Depends(get_session) → FastAPI automatically injects DB session
+
+CRUD functions remain separate, maintaining clean architecture
+
+Combines SQLModel, FastAPI endpoints, and dependency injection
+
+9. Best Practices
+
+Keep CRUD logic in separate service classes/functions, not in endpoint code.
+
+Use sessions via dependency injection for automatic cleanup.
+
+Always call session.refresh(obj) after commit() for updated fields like auto-increment IDs.
+
+Use select() for queries, avoid raw SQL unless necessary.
+
+Combine SQLModel and Pydantic schemas for validation and response models.
+
+For production, consider Alembic for migrations instead of create_all.
+
+10. Commands Summary
+
+Run PostgreSQL:
+
+sudo service postgresql start
+
+
+Create tables (Python shell):
+
+python
+>>> from db import engine
+>>> from models import SQLModel
+>>> SQLModel.metadata.create_all(engine)
+
+
+Run FastAPI server:
+
+uvicorn main:app --reload
+
+
+Test CRUD endpoints:
+
+Swagger UI → http://127.0.0.1:8000/docs
+
+Postman or curl
+
+✅ Next Module: Module 5 – Alembic: Migration Commands, Versioning, and Best Practices
+
+I can proceed to Module 5: Alembic and Database Migrations next.
+
+Do you want me to continue?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s move on to Module 5: Alembic – Migration Commands, Versioning, and Best Practices in the same detailed, step-by-step style.
+
+Module 5: Alembic – Migration Commands, Versioning, and Best Practices
+1. Introduction
+
+Alembic is the official database migration tool for SQLAlchemy. It allows you to:
+
+Track schema changes over time
+
+Apply migrations consistently across environments
+
+Handle database versioning
+
+In FastAPI projects with SQLModel, Alembic manages table changes without dropping and recreating tables.
+
+2. Installing Alembic
+pip install alembic
+
+
+alembic → CLI tool for migrations
+
+Optional: install psycopg2-binary if not already installed
+
+3. Initializing Alembic
+
+Inside your project folder:
+
+alembic init alembic
+
+
+Creates an alembic/ folder with:
+
+alembic/
+    env.py       # main migration environment
+    script.py.mako  # template for migration scripts
+    versions/     # folder where migration scripts are stored
+alembic.ini      # configuration file
+
+4. Configuring Alembic with SQLModel
+
+Open alembic.ini and set your database URL:
+
+sqlalchemy.url = postgresql+psycopg2://yogesh:Yogesh1234@localhost:5432/myapp
+
+
+Modify alembic/env.py to work with SQLModel:
+
+from logging.config import fileConfig
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
+from alembic import context
+from sqlmodel import SQLModel
+from models import User  # import all models here
+
+# this is the Alembic Config object
+config = context.config
+fileConfig(config.config_file_name)
+
+target_metadata = SQLModel.metadata  # SQLModel metadata
+
+def run_migrations_offline():
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+    with context.begin_transaction():
+        context.run_migrations()
+
+def run_migrations_online():
+    connectable = engine_from_config(config.get_section(config.config_ini_section),
+                                     prefix="sqlalchemy.",
+                                     poolclass=pool.NullPool)
+    with connectable.connect() as connection:
+        context.configure(connection=connection, target_metadata=target_metadata)
+        with context.begin_transaction():
+            context.run_migrations()
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+
+5. Creating a Migration Script
+
+Autogenerate migration:
+
+alembic revision --autogenerate -m "create user table"
+
+
+--autogenerate → detects changes in SQLModel models
+
+-m → message describing migration
+
+Creates a file in alembic/versions/
+
+Inspect migration script
+Check for op.create_table(...) and other commands
+
+6. Applying Migrations
+
+Apply latest migration:
+
+alembic upgrade head
+
+
+Revert to previous migration:
+
+alembic downgrade -1
+
+
+View current migration:
+
+alembic current
+
+7. Best Practices for Alembic
+
+Always review autogenerated scripts before applying.
+
+Commit migration scripts to version control.
+
+Use descriptive names: "add_email_to_user", "remove_is_active_field".
+
+For multiple developers, ensure migration history is synchronized.
+
+For production, apply migrations via CI/CD pipeline instead of create_all().
+
+8. Example Workflow
+# 1. Initialize Alembic (once)
+alembic init alembic
+
+# 2. Make model changes in models.py
+# e.g., add `is_admin: bool = Field(default=False)` to User
+
+# 3. Create migration
+alembic revision --autogenerate -m "add is_admin to user"
+
+# 4. Apply migration
+alembic upgrade head
+
+# 5. Check applied migrations
+alembic current
+
+9. Integration Tip with FastAPI & SQLModel
+
+Do not use SQLModel.metadata.create_all(engine) in production.
+
+Always rely on Alembic migrations for consistent DB schema.
+
+Keep all models imported in env.py so Alembic can detect changes.
+
+10. Commands Summary
+Command	Description
+alembic init alembic	Initialize migration folder
+alembic revision --autogenerate -m "message"	Generate migration
+alembic upgrade head	Apply latest migration
+alembic downgrade -1	Revert last migration
+alembic current	Show current migration
+
+✅ Next Module: Module 6 – Authentication & Authorization with JWT (Access & Refresh Tokens)
+
+Do you want me to continue with Module 6 next?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s dive into Module 6: Authentication & Authorization with JWT (Access & Refresh Tokens) with full details, examples, commands, and best practices.
+
+Module 6: Authentication & Authorization with JWT
+1. Introduction
+
+Authentication and authorization are critical for securing FastAPI applications:
+
+Authentication → Verifies who the user is (login, JWT tokens)
+
+Authorization → Determines what the user can do (roles, permissions)
+
+We’ll implement JWT-based authentication with access and refresh tokens, and integrate it with FastAPI dependencies.
+
+2. Installing Dependencies
+pip install pyjwt passlib[bcrypt] python-multipart
+
+
+pyjwt → JWT encode/decode
+
+passlib[bcrypt] → Password hashing
+
+python-multipart → Needed for form data login (optional)
+
+3. JWT Basics
+
+A JWT has three parts:
+
+Header – contains type & algorithm
+
+Payload – contains claims like user_id, role, expiration
+
+Signature – hash of header+payload using secret key
+
+Example structure:
+
+HEADER.PAYLOAD.SIGNATURE
+
+4. Creating JWT Utility Functions
+import jwt
+from datetime import datetime, timedelta
+
+SECRET_KEY = "your_secret_key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise Exception("Token expired")
+    except jwt.InvalidTokenError:
+        raise Exception("Invalid token")
+
+5. Password Hashing and Verification
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(password, hashed_password)
+
+6. FastAPI HTTPBearer Dependency
+
+FastAPI provides HTTPBearer for extracting JWT from Authorization header.
+
+We can inherit and override it to decode and validate JWT.
+
+from fastapi import Request, HTTPException, status
+from fastapi.security import HTTPBearer
+
+class JWTBearer(HTTPBearer):
+    def __init__(self, auto_error: bool = True):
+        super(JWTBearer, self).__init__(auto_error=auto_error)
+
+    async def __call__(self, request: Request):
+        credentials = await super(JWTBearer, self).__call__(request)
+        if credentials:
+            token = credentials.credentials
+            try:
+                payload = decode_token(token)
+                return payload
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+
+
+Usage in route:
+
+from fastapi import Depends, APIRouter
+
+router = APIRouter()
+
+@router.get("/protected")
+async def protected_route(user: dict = Depends(JWTBearer())):
+    return {"user_id": user.get("user_id"), "message": "You are authorized"}
+
+7. Access vs Refresh Tokens
+
+Access Token → short-lived, used for API requests
+
+Refresh Token → long-lived, used to get a new access token without logging in
+
+Example flow:
+
+User logs in → receives access & refresh tokens
+
+Access token expires → client sends refresh token → server issues new access token
+
+Logout → revoke refresh token in Redis (blacklisting)
+
+8. Role-Based Authentication
+def role_required(allowed_roles: list):
+    def wrapper(user: dict = Depends(JWTBearer())):
+        if user.get("role") not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        return user
+    return wrapper
+
+# Example usage
+@router.get("/admin-only")
+async def admin_route(user: dict = Depends(role_required(["admin"]))):
+    return {"message": f"Hello {user.get('username')}, you are an admin"}
+
+
+Checks the user role in JWT payload against allowed roles.
+
+9. Integration with Redis (Token Revocation)
+import redis
+
+r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+
+# Add JTI to blacklist
+def revoke_token(jti: str):
+    r.sadd("blacklist", jti)
+
+# Check if token is revoked
+def is_token_revoked(jti: str) -> bool:
+    return r.sismember("blacklist", jti)
+
+
+On logout, add token JTI to Redis
+
+On every request, check if token is revoked before allowing access
+
+10. Tips & Best Practices
+
+Keep secret keys safe → .env or pydantic settings.
+
+Use short-lived access tokens to limit exposure.
+
+Always validate token type (access vs refresh) in routes.
+
+Blacklist revoked tokens in Redis to prevent reuse.
+
+Use role-based authentication for sensitive routes.
+
+Avoid storing sensitive data in JWT payload, only store user_id, role, and minimal claims.
+
+11. Commands & Summary
+Action	Command/Code
+Install dependencies	pip install pyjwt passlib[bcrypt] python-multipart
+Create access token	create_access_token(data={"user_id": 1})
+Create refresh token	create_refresh_token(data={"user_id": 1})
+Decode token	decode_token(token)
+Apply JWTBearer dependency	Depends(JWTBearer())
+Role-based protection	Depends(role_required(["admin"]))
+Revoke token in Redis	revoke_token(jti)
+Check blacklist	is_token_revoked(jti)
+
+✅ Next Module: Module 7 – Redis – Setup, Token Revocation, Integration for JWT Blacklisting
+
+Do you want me to continue with Module 7 now?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s dive into Module 7: Redis – Setup, Token Revocation, and JWT Blacklisting with detailed explanation, commands, examples, and best practices.
+
+Module 7: Redis – Setup, Token Revocation, Integration for JWT Blacklisting
+1. Introduction
+
+Redis is an in-memory data store, commonly used for:
+
+Caching
+
+Session storage
+
+JWT token revocation (blacklisting)
+
+Background task management (Celery)
+
+In our FastAPI app, we use Redis to revoke JWT tokens so that when a user logs out, their tokens cannot be used again.
+
+2. Installing Redis and Python Client
+Install Redis (Linux example)
+sudo apt update
+sudo apt install redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+
+Install Python Redis Client
+pip install redis
+
+Verify Redis is running
+redis-cli ping
+# Output should be: PONG
+
+3. Connecting to Redis in FastAPI
+import redis
+
+# Connect to Redis
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    db=0,
+    decode_responses=True  # Return strings instead of bytes
+)
+
+
+host → Redis server address
+
+port → Default 6379
+
+db → Database index (0–15)
+
+decode_responses=True → Makes it easier to handle strings in Python
+
+4. JWT Token Blacklisting Concept
+
+Each JWT token has a unique identifier (JTI).
+
+When a user logs out, we store the JTI in Redis.
+
+Before granting access, check if JTI exists in Redis:
+
+Exists → Token is revoked → Deny access
+
+Not exists → Token is valid → Proceed
+
+5. Utility Functions for Token Revocation
+# Add a token to the blacklist
+def revoke_token(jti: str):
+    redis_client.sadd("blacklist", jti)
+
+# Check if a token is blacklisted
+def is_token_revoked(jti: str) -> bool:
+    return redis_client.sismember("blacklist", jti)
+
+
+sadd → Adds JTI to a Redis set called "blacklist"
+
+sismember → Checks if JTI exists in the set
+
+6. Integrating Blacklist Check with JWTBearer
+from fastapi import HTTPException, status
+from fastapi.security import HTTPBearer
+from fastapi import Request
+
+class JWTBearerWithBlacklist(HTTPBearer):
+    async def __call__(self, request: Request):
+        credentials = await super().__call__(request)
+        if credentials:
+            token = credentials.credentials
+            payload = decode_token(token)
+            jti = payload.get("jti")
+            if is_token_revoked(jti):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token has been revoked")
+            return payload
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+
+
+Usage in route:
+
+from fastapi import APIRouter, Depends
+
+router = APIRouter()
+
+@router.get("/protected")
+async def protected_route(user: dict = Depends(JWTBearerWithBlacklist())):
+    return {"message": f"Hello {user['user_id']}, your token is valid!"}
+
+7. Logout Example
+@router.post("/logout")
+async def logout(user: dict = Depends(JWTBearerWithBlacklist())):
+    jti = user.get("jti")
+    revoke_token(jti)
+    return {"message": "Successfully logged out"}
+
+
+Stores the JWT's JTI in Redis.
+
+Any subsequent request with the same token is denied.
+
+8. Optional: Expiry for Blacklisted Tokens
+
+Add an expiration to prevent Redis from growing infinitely:
+
+def revoke_token_with_expiry(jti: str, expires_in: int = 3600):
+    redis_client.setex(f"blacklist:{jti}", expires_in, "revoked")
+
+def is_token_revoked(jti: str) -> bool:
+    return redis_client.exists(f"blacklist:{jti}") == 1
+
+
+setex → Sets key with expiry in seconds
+
+Tokens automatically removed after expiry
+
+9. Best Practices
+
+Use Redis sets for efficient membership checks (O(1) complexity).
+
+Store only JTI, not full token, to save memory.
+
+Set expiry for blacklisted tokens equal to token expiration.
+
+Combine Redis with role-based authorization for secure APIs.
+
+Use environment variables for Redis host/port, e.g., via pydantic BaseSettings.
+
+10. Commands & Summary
+Action	Command/Code
+Install Redis (Ubuntu)	sudo apt install redis-server
+Start Redis service	sudo systemctl start redis-server
+Install Python client	pip install redis
+Connect to Redis	redis.Redis(host="localhost", port=6379, db=0)
+Revoke token	revoke_token(jti)
+Check blacklist	is_token_revoked(jti)
+Revoke with expiry	revoke_token_with_expiry(jti, expires_in=3600)
+
+✅ Next Module: Module 8 – Model Relationships in SQLModel: One-to-One, One-to-Many, Foreign Keys, and Queries
+
+Do you want me to continue with Module 8 now?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s continue with Module 8: Model Relationships in SQLModel – One-to-One, One-to-Many, Foreign Keys, and Queries in full detail.
+
+Module 8: Model Relationships in SQLModel
+1. Introduction
+
+In real-world applications, database tables often relate to each other. SQLModel (built on SQLAlchemy) provides a simple and powerful way to define relationships:
+
+One-to-One: A row in Table A corresponds to exactly one row in Table B.
+
+One-to-Many: A row in Table A can have multiple rows in Table B.
+
+Many-to-Many: Multiple rows in Table A can relate to multiple rows in Table B (we’ll cover basics of linking table).
+
+We also handle foreign keys and querying relationships.
+
+2. Import Statements
+from typing import List, Optional
+from sqlmodel import SQLModel, Field, Relationship, Session, create_engine, select
+
+3. One-to-One Relationship Example
+
+Scenario: Each User has exactly one Profile.
+
+class Profile(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    bio: str
+    user_id: int = Field(foreign_key="user.id")  # Foreign key linking to User
+    user: Optional["User"] = Relationship(back_populates="profile")
+
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    email: str
+    profile: Optional[Profile] = Relationship(back_populates="user", sa_relationship_kwargs={"uselist": False})
+
+
+Key Points:
+
+foreign_key → Links tables (user.id)
+
+Relationship → Establishes ORM relationship
+
+uselist=False → Ensures one-to-one
+
+Query Example:
+
+with Session(engine) as session:
+    user = session.exec(select(User).where(User.username=="yogesh")).first()
+    print(user.profile.bio)
+
+4. One-to-Many Relationship Example
+
+Scenario: A User can have multiple Posts.
+
+class Post(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    content: str
+    user_id: int = Field(foreign_key="user.id")
+    author: Optional["User"] = Relationship(back_populates="posts")
+
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    email: str
+    posts: List[Post] = Relationship(back_populates="author")
+
+
+Query Example:
+
+with Session(engine) as session:
+    user = session.exec(select(User).where(User.username=="yogesh")).first()
+    for post in user.posts:
+        print(post.title, post.content)
+
+
+Key Points:
+
+List[Post] indicates multiple posts per user.
+
+back_populates allows bidirectional access.
+
+5. Foreign Keys
+
+Define a column that references another table.
+
+Example: user_id: int = Field(foreign_key="user.id")
+
+Ensures referential integrity.
+
+Can cascade deletes if needed (configure in Relationship via sa_relationship_kwargs).
+
+6. Many-to-Many Relationship (Optional)
+
+Scenario: Student can enroll in many Courses.
+
+from sqlmodel import Table
+
+class StudentCourse(SQLModel, table=True):
+    student_id: Optional[int] = Field(default=None, foreign_key="student.id", primary_key=True)
+    course_id: Optional[int] = Field(default=None, foreign_key="course.id", primary_key=True)
+
+
+class Student(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    courses: List["Course"] = Relationship(back_populates="students", link_model=StudentCourse)
+
+
+class Course(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    students: List[Student] = Relationship(back_populates="courses", link_model=StudentCourse)
+
+
+link_model defines a join table.
+
+Access courses per student or students per course easily.
+
+7. Creating Tables and Engine
+engine = create_engine("postgresql+asyncpg://user:password@localhost/mydb", echo=True)
+
+SQLModel.metadata.create_all(engine)
+
+
+create_all() ensures all tables and relationships are created.
+
+echo=True logs SQL queries for debugging.
+
+8. Querying Relationships
+
+Get all posts of a user:
+
+with Session(engine) as session:
+    user = session.exec(select(User).where(User.id==1)).first()
+    for post in user.posts:
+        print(post.title)
+
+
+Get the user of a post:
+
+with Session(engine) as session:
+    post = session.exec(select(Post).where(Post.id==10)).first()
+    print(post.author.username)
+
+
+Join Example:
+
+stmt = select(Post, User).join(User, Post.user_id==User.id)
+with Session(engine) as session:
+    results = session.exec(stmt).all()
+    for post, user in results:
+        print(post.title, user.username)
+
+9. Tips & Best Practices
+
+Always use Optional for foreign key relationships to avoid initialization errors.
+
+Use back_populates for bidirectional access between tables.
+
+Set uselist=False for one-to-one relationships.
+
+For many-to-many, use a link table with composite primary keys.
+
+Use echo=True in development to debug SQL queries.
+
+Consider cascading deletes for dependent tables to maintain integrity.
+
+10. Commands Summary
+Action	Command/Code
+Create engine	engine = create_engine("postgresql+asyncpg://user:password@localhost/mydb", echo=True)
+Create tables	SQLModel.metadata.create_all(engine)
+Start session	with Session(engine) as session:
+Query all	session.exec(select(User)).all()
+Query by condition	session.exec(select(User).where(User.id==1)).first()
+
+✅ Next Module: Module 9 – Exception Handling in FastAPI: Custom Exceptions and Handlers
+
+Do you want me to continue with Module 9 now?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s continue with Module 9: Exception Handling in FastAPI – Custom Exceptions and Handlers in full detail.
+
+Module 9: Exception Handling in FastAPI
+1. Introduction
+
+Exception handling ensures your API responds gracefully when errors occur. FastAPI provides a flexible system to:
+
+Raise HTTP exceptions for common HTTP errors.
+
+Create custom exceptions for specific business logic.
+
+Add global exception handlers to manage exceptions consistently.
+
+Proper exception handling improves API reliability and user experience.
+
+2. Import Statements
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+
+3. Raising Built-in HTTP Exceptions
+
+FastAPI provides the HTTPException class to return error responses:
+
+app = FastAPI()
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int):
+    if user_id != 1:  # Suppose we only have user with ID=1
+        raise HTTPException(
+            status_code=404,
+            detail=f"User with ID {user_id} not found",
+        )
+    return {"user_id": user_id, "name": "Yogesh"}
+
+
+Explanation:
+
+status_code → HTTP status code (404 Not Found, 403 Forbidden, etc.)
+
+detail → Error message returned as JSON
+
+Raises exception immediately and stops execution of the endpoint
+
+Example Response:
+
+{
+  "detail": "User with ID 2 not found"
+}
+
+4. Custom Exceptions
+
+You can define custom exceptions for business logic:
+
+class InsufficientBalanceException(Exception):
+    def __init__(self, balance: float, amount: float):
+        self.balance = balance
+        self.amount = amount
+        self.message = f"Insufficient balance. Tried to withdraw {amount}, but only {balance} available."
+        super().__init__(self.message)
+
+
+Custom exceptions can store extra data (like balance and amount).
+
+Inherits from Python’s built-in Exception.
+
+5. Adding Global Exception Handlers
+
+FastAPI allows you to register handlers for exceptions globally:
+
+@app.exception_handler(InsufficientBalanceException)
+async def insufficient_balance_handler(request: Request, exc: InsufficientBalanceException):
+    return JSONResponse(
+        status_code=400,
+        content={"message": exc.message, "balance": exc.balance, "attempted_withdrawal": exc.amount},
+    )
+
+
+Explanation:
+
+@app.exception_handler(ExceptionType) → Registers handler
+
+request → The incoming request object
+
+exc → The exception instance
+
+Return a JSONResponse with custom status and content
+
+Example Usage:
+
+@app.post("/withdraw")
+def withdraw(amount: float):
+    balance = 100
+    if amount > balance:
+        raise InsufficientBalanceException(balance=balance, amount=amount)
+    return {"message": f"Withdrawal of {amount} successful"}
+
+
+Response Example (amount > balance):
+
+{
+  "message": "Insufficient balance. Tried to withdraw 200, but only 100 available.",
+  "balance": 100,
+  "attempted_withdrawal": 200
+}
+
+6. Using HTTPException with Dependencies
+
+FastAPI dependencies can also raise exceptions:
+
+from fastapi import Depends
+
+def verify_user(token: str):
+    if token != "valid-token":
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return token
+
+@app.get("/secure-data")
+def secure_data(token: str = Depends(verify_user)):
+    return {"data": "Sensitive Information"}
+
+
+Invalid token → 401 Unauthorized response
+
+Dependency can prevent endpoint execution if checks fail
+
+7. Tips and Best Practices
+
+Use HTTP status codes wisely:
+
+400 → Bad Request
+
+401 → Unauthorized
+
+403 → Forbidden
+
+404 → Not Found
+
+500 → Internal Server Error
+
+Custom exceptions help separate business logic from generic HTTP errors.
+
+Always return structured JSON responses to maintain API consistency.
+
+Handle dependency exceptions to prevent security issues (authentication, validation, etc.).
+
+For large apps, create a separate exceptions.py module for all exception classes and handlers.
+
+8. Summary Table
+Feature	Example
+Raise HTTPException	raise HTTPException(status_code=404, detail="Not found")
+Custom Exception	class MyException(Exception): ...
+Register Handler	@app.exception_handler(MyException)
+Dependency Exception	raise HTTPException(status_code=401, detail="Invalid token")
+
+✅ Next Module: Module 10 – Middleware in FastAPI: Logging, CORS, Header Checks
+
+Do you want me to continue with Module 10 now?
+
+You said:
+yes
+ChatGPT said:
+
+Great! Let’s move on to Module 10: Middleware in FastAPI – Logging, CORS, Header Checks in full detail.
+
+Module 10: Middleware in FastAPI
+1. Introduction
+
+Middleware in FastAPI allows you to intercept requests and responses globally. It’s useful for:
+
+Logging requests and responses
+
+Checking headers (like API keys)
+
+Handling CORS (Cross-Origin Resource Sharing)
+
+Modifying requests or responses before reaching endpoints
+
+Middleware runs before and after each request, making it ideal for cross-cutting concerns.
+
+2. Import Statements
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+import time
+import logging
+
+3. Creating Custom Middleware
+
+FastAPI allows you to create custom middleware using the @app.middleware("http") decorator:
+
+app = FastAPI()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    
+    # Process request
+    response = await call_next(request)
+    
+    process_time = time.time() - start_time
+    logging.info(f"{request.method} {request.url} completed in {process_time:.4f} seconds")
+    
+    return response
+
+
+Explanation:
+
+request → Incoming request object
+
+call_next → Function to process request further down the stack
+
+await call_next(request) → Calls the next middleware or endpoint
+
+Middleware can modify request or response before returning
+
+Example Output in Logs:
+
+INFO:root:GET http://127.0.0.1:8000/users completed in 0.0021 seconds
+
+4. Adding CORS Middleware
+
+CORS is needed when your API is accessed from a different origin (like frontend apps).
+
+origins = [
+    "http://localhost:3000",
+    "https://myfrontend.com",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,   # List of allowed origins
+    allow_credentials=True,
+    allow_methods=["*"],     # Allow all HTTP methods
+    allow_headers=["*"],     # Allow all headers
+)
+
+
+Tips:
+
+Avoid allow_origins=["*"] in production for security reasons.
+
+allow_credentials=True enables cookies and headers like Authorization.
+
+5. Header Checks Middleware
+
+You can check headers for authentication, API keys, or custom logic:
+
+@app.middleware("http")
+async def check_api_key(request: Request, call_next):
+    api_key = request.headers.get("x-api-key")
+    if api_key != "my-secret-key":
+        return JSONResponse(status_code=403, content={"detail": "Forbidden: Invalid API Key"})
+    
+    response = await call_next(request)
+    return response
+
+
+Checks for x-api-key header
+
+Returns 403 Forbidden if header is missing or incorrect
+
+Prevents unauthorized requests before reaching endpoints
+
+6. Combining Multiple Middleware
+
+You can combine logging, header checks, and CORS:
+
+# CORS middleware
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logging.info(f"Request URL: {request.url}")
+    response = await call_next(request)
+    logging.info(f"Response status: {response.status_code}")
+    return response
+
+# API key middleware
+@app.middleware("http")
+async def check_api_key(request: Request, call_next):
+    if request.headers.get("x-api-key") != "my-secret-key":
+        return JSONResponse(status_code=403, content={"detail": "Invalid API Key"})
+    return await call_next(request)
+
+
+Best Practices:
+
+Keep middleware lightweight; heavy logic can slow all requests.
+
+Use dependencies for endpoint-specific checks instead of middleware if possible.
+
+Order matters: middleware executes in the order added.
+
+Avoid raising exceptions in middleware without proper handling — always return a response.
+
+7. Middleware vs Dependency
+Feature	Middleware	Dependency
+Scope	Global (all requests)	Per endpoint
+Use Cases	Logging, CORS, headers	Authentication, validation
+Execution Time	Before/after request	Only before endpoint execution
+8. Example: Complete Middleware Setup
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import logging
+import time
+
+app = FastAPI()
+
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Request logging
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    logging.info(f"{request.method} {request.url} completed in {duration:.4f}s")
+    return response
+
+# Header API key check
+@app.middleware("http")
+async def check_api_key(request: Request, call_next):
+    if request.headers.get("x-api-key") != "my-secret-key":
+        return JSONResponse(status_code=403, content={"detail": "Forbidden: Invalid API Key"})
+    return await call_next(request)
+
+@app.get("/users")
+async def users():
+    return [{"id": 1, "name": "Yogesh"}]
+
+
+✅ Next Module: Module 11 – Email & FastAPI Mail Setup, Sending Emails, Verification
+
+Do you want me to continue with Module 11 next?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s move on to Module 11: Email & FastAPI Mail Setup, Sending Emails, Verification in full detail.
+
+Module 11: Email & FastAPI Mail
+1. Introduction
+
+FastAPI Mail allows sending emails asynchronously or synchronously from your FastAPI app. Common use cases:
+
+Account verification
+
+Password reset
+
+Notifications
+
+Key considerations:
+
+Always use environment variables for credentials.
+
+Use async to avoid blocking API responses.
+
+Encode sensitive tokens (like verification links) securely.
+
+2. Installation
+pip install fastapi-mail[async]
+
+3. Import Statements
+from fastapi import FastAPI, BackgroundTasks
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from pydantic import BaseModel, EmailStr
+import secrets
+from typing import List
+
+4. Configuration
+
+Create a ConnectionConfig with your email provider details:
+
+conf = ConnectionConfig(
+    MAIL_USERNAME = "your_email@gmail.com",
+    MAIL_PASSWORD = "your_email_password",
+    MAIL_FROM = "your_email@gmail.com",
+    MAIL_PORT = 587,
+    MAIL_SERVER = "smtp.gmail.com",
+    MAIL_FROM_NAME = "FastAPI App",
+    MAIL_TLS = True,
+    MAIL_SSL = False,
+    USE_CREDENTIALS = True,
+    VALIDATE_CERTS = True
+)
+
+
+Tips:
+
+For Gmail, you may need an App Password if 2FA is enabled.
+
+Store credentials in .env file and use pydantic.BaseSettings.
+
+5. Creating Email Schema
+
+Use Pydantic to define the email payload:
+
+class EmailSchema(BaseModel):
+    email: List[EmailStr]
+    subject: str
+    body: str
+
+6. Sending Emails Synchronously
+app = FastAPI()
+
+@app.post("/send-email")
+async def send_email(email: EmailSchema):
+    message = MessageSchema(
+        subject=email.subject,
+        recipients=email.email,  # List of emails
+        body=email.body,
+        subtype=MessageType.html
+    )
+    fm = FastMail(conf)
+    await fm.send_message(message)
+    return {"message": "Email has been sent"}
+
+
+Explanation:
+
+MessageSchema → Defines email content and recipients
+
+FastMail.send_message() → Sends email asynchronously
+
+7. Sending Emails with BackgroundTasks
+
+Sending emails in background tasks prevents blocking API responses:
+
+@app.post("/send-email-bg")
+async def send_email_bg(email: EmailSchema, background_tasks: BackgroundTasks):
+    message = MessageSchema(
+        subject=email.subject,
+        recipients=email.email,
+        body=email.body,
+        subtype=MessageType.html
+    )
+    fm = FastMail(conf)
+    background_tasks.add_task(fm.send_message, message)
+    return {"message": "Email sending started in background"}
+
+8. Email Verification Example
+Step 1: Generate Verification Token
+def generate_verification_token():
+    return secrets.token_urlsafe(32)
+
+
+Generates a secure token
+
+Can be stored in database along with the user
+
+Step 2: Send Verification Email
+@app.post("/register")
+async def register_user(email: EmailStr, background_tasks: BackgroundTasks):
+    token = generate_verification_token()
+    verification_link = f"http://localhost:8000/verify-email?token={token}"
+    
+    message = MessageSchema(
+        subject="Verify Your Email",
+        recipients=[email],
+        body=f"<p>Click the link to verify your email: <a href='{verification_link}'>Verify</a></p>",
+        subtype=MessageType.html
+    )
+    
+    fm = FastMail(conf)
+    background_tasks.add_task(fm.send_message, message)
+    
+    # Save token in DB for verification later
+    return {"message": "Verification email sent", "token": token}
+
+Step 3: Verify Token Endpoint
+@app.get("/verify-email")
+async def verify_email(token: str):
+    # Here you would check token from DB
+    if token == "valid_token_example":
+        return {"message": "Email verified successfully!"}
+    else:
+        return {"message": "Invalid or expired token"}
+
+9. Encoding & Decoding Tokens
+
+Use JWT or URL-safe base64 tokens to encode sensitive info in verification links
+
+Example using jwt:
+
+import jwt
+from datetime import datetime, timedelta
+
+SECRET_KEY = "your_secret_key"
+
+def create_email_token(email: str):
+    payload = {
+        "sub": email,
+        "exp": datetime.utcnow() + timedelta(hours=24)
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
+def decode_email_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload["sub"]
+    except jwt.ExpiredSignatureError:
+        return None
+
+
+Encode the email in token and send in verification link
+
+Decode when user clicks to validate
+
+10. Best Practices & Tips
+
+Never hardcode credentials in code; use .env files.
+
+Use async & background tasks to avoid slowing down API.
+
+Verify token expiration to prevent misuse.
+
+Sanitize email body and links to prevent injection attacks.
+
+Use HTML email templates for better presentation.
+
+11. Example: Complete Email Module
+from fastapi import FastAPI, BackgroundTasks
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from pydantic import BaseModel, EmailStr
+import secrets
+import jwt
+from datetime import datetime, timedelta
+from typing import List
+
+SECRET_KEY = "your_secret_key"
+
+app = FastAPI()
+
+conf = ConnectionConfig(
+    MAIL_USERNAME="your_email@gmail.com",
+    MAIL_PASSWORD="your_password",
+    MAIL_FROM="your_email@gmail.com",
+    MAIL_PORT=587,
+    MAIL_SERVER="smtp.gmail.com",
+    MAIL_FROM_NAME="FastAPI App",
+    MAIL_TLS=True,
+    MAIL_SSL=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True
+)
+
+class EmailSchema(BaseModel):
+    email: List[EmailStr]
+    subject: str
+    body: str
+
+def create_email_token(email: str):
+    payload = {"sub": email, "exp": datetime.utcnow() + timedelta(hours=24)}
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+def decode_email_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload["sub"]
+    except jwt.ExpiredSignatureError:
+        return None
+
+@app.post("/register")
+async def register_user(email: EmailStr, background_tasks: BackgroundTasks):
+    token = create_email_token(email)
+    verification_link = f"http://localhost:8000/verify-email?token={token}"
+    
+    message = MessageSchema(
+        subject="Verify Your Email",
+        recipients=[email],
+        body=f"<p>Click <a href='{verification_link}'>here</a> to verify your email</p>",
+        subtype=MessageType.html
+    )
+    
+    fm = FastMail(conf)
+    background_tasks.add_task(fm.send_message, message)
+    
+    return {"message": "Verification email sent"}
+
+@app.get("/verify-email")
+async def verify_email(token: str):
+    email = decode_email_token(token)
+    if email:
+        return {"message": f"Email {email} verified successfully!"}
+    return {"message": "Invalid or expired token"}
+
+
+✅ Next Module: Module 12 – Background Tasks with FastAPI, Celery, Redis, Flower
+
+Do you want me to continue with Module 12 next?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s dive into Module 12: Background Tasks with FastAPI, Celery, Redis, and Flower in full detail.
+
+Module 12: Background Tasks, Celery, Redis, and Flower
+1. Introduction
+
+Background tasks allow your FastAPI application to handle time-consuming tasks asynchronously without blocking the main thread. Typical use cases:
+
+Sending emails
+
+Image or video processing
+
+Heavy computation
+
+Notifications
+
+We will cover FastAPI built-in background tasks and Celery with Redis for more complex workflows, along with Flower for monitoring.
+
+2. FastAPI Default Background Tasks
+Step 1: Import Statements
+from fastapi import FastAPI, BackgroundTasks
+
+Step 2: Define Background Task Function
+def write_log(message: str):
+    with open("log.txt", "a") as f:
+        f.write(message + "\n")
+
+Step 3: Attach Background Task to Endpoint
+app = FastAPI()
+
+@app.post("/send-log")
+async def send_log(message: str, background_tasks: BackgroundTasks):
+    background_tasks.add_task(write_log, message)
+    return {"message": "Log will be written in background"}
+
+
+Explanation:
+
+BackgroundTasks is injected into the endpoint.
+
+add_task(function, *args, **kwargs) schedules the task after returning response.
+
+Non-blocking and simple to use.
+
+3. Celery for Advanced Background Tasks
+
+Celery is a distributed task queue used to execute long-running tasks asynchronously.
+
+Step 1: Installation
+pip install celery[redis]
+
+
+Requires Redis or RabbitMQ as broker.
+
+Step 2: Project Structure
+project/
+│
+├── app/
+│   ├── main.py
+│   └── tasks.py
+│
+├── celery_worker.py
+└── requirements.txt
+
+Step 3: Celery Configuration (tasks.py)
+from celery import Celery
+
+# Redis broker URL
+celery_app = Celery(
+    "tasks",
+    broker="redis://localhost:6379/0",
+    backend="redis://localhost:6379/0"
+)
+
+@celery_app.task
+def add_numbers(a: int, b: int):
+    return a + b
+
+
+broker → Where tasks are sent
+
+backend → Where results are stored
+
+Step 4: Integrate Celery with FastAPI
+from fastapi import FastAPI
+from app.tasks import add_numbers
+
+app = FastAPI()
+
+@app.post("/add")
+async def add(a: int, b: int):
+    task = add_numbers.delay(a, b)
+    return {"task_id": task.id}
+
+
+.delay() → Executes task asynchronously
+
+task.id → Used to track the result
+
+Step 5: Running Celery Worker
+celery -A app.tasks.celery_app worker --loglevel=info
+
+
+-A app.tasks.celery_app → points to Celery app instance
+
+Worker listens for tasks and executes them asynchronously
+
+Step 6: Check Task Result
+result = add_numbers.AsyncResult(task_id)
+result.status  # PENDING, SUCCESS, FAILURE
+result.get()   # Returns the actual result
+
+4. Redis Setup for Celery
+
+Redis acts as a message broker for Celery tasks.
+
+Step 1: Install Redis
+sudo apt update
+sudo apt install redis-server
+
+Step 2: Start Redis Server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+redis-cli ping  # Should return PONG
+
+Step 3: Redis Integration for JWT Blacklisting
+
+Store revoked tokens in Redis to deny access
+
+Example:
+
+import redis
+
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+# Add token JTI to blacklist
+r.set("revoked_jti:abc123", True)
+
+# Check if token is revoked
+r.exists("revoked_jti:abc123")  # Returns 1 if exists
+
+
+This ensures logged-out users cannot reuse old tokens.
+
+5. Flower: Monitoring Celery
+
+Flower is a web-based monitoring tool for Celery.
+
+Step 1: Install Flower
+pip install flower
+
+Step 2: Run Flower
+celery -A app.tasks.celery_app flower
+
+
+Opens at http://localhost:5555
+
+Monitor:
+
+Task status
+
+Worker activity
+
+Task history
+
+Retries
+
+6. Best Practices
+
+Always run Redis in production mode with password authentication.
+
+Use background tasks for lightweight tasks and Celery for heavy computation.
+
+Set task time limits to prevent runaway tasks.
+
+Use Flower in development to monitor queues; in production, use logs + Prometheus.
+
+Store sensitive data in environment variables (like Redis password).
+
+Handle retries and exceptions in Celery tasks using max_retries and try/except.
+
+7. Example: Full Background Task with FastAPI + Celery + Redis
+# tasks.py
+from celery import Celery
+import time
+
+celery_app = Celery(
+    "tasks",
+    broker="redis://localhost:6379/0",
+    backend="redis://localhost:6379/0"
+)
+
+@celery_app.task(bind=True, max_retries=3)
+def long_task(self, seconds: int):
+    try:
+        time.sleep(seconds)
+        return f"Task completed in {seconds} seconds"
+    except Exception as e:
+        self.retry(exc=e, countdown=5)
+
+# main.py
+from fastapi import FastAPI
+from tasks import long_task
+
+app = FastAPI()
+
+@app.post("/long-task")
+async def run_long_task(seconds: int):
+    task = long_task.delay(seconds)
+    return {"task_id": task.id, "status_url": f"/task-status/{task.id}"}
+
+@app.get("/task-status/{task_id}")
+async def task_status(task_id: str):
+    result = long_task.AsyncResult(task_id)
+    return {"status": result.status, "result": result.result}
+
+
+✅ Next Module: Module 13 – API Documentation (/docs & /redoc) and Testing FastAPI Endpoints
+
+Do you want me to continue with Module 13 next?
+
+You said:
+yes
+ChatGPT said:
+
+Perfect! Let’s move on to the next module.
+
+Module 13: API Documentation and Testing in FastAPI
+
+FastAPI has automatic API documentation and built-in testing support that makes development and debugging extremely convenient.
+
+1. Introduction
+
+FastAPI automatically generates interactive API documentation using:
+
+Swagger UI → /docs (interactive UI, supports trying out endpoints)
+
+ReDoc → /redoc (cleaner documentation style)
+
+OpenAPI JSON → /openapi.json (machine-readable API specification)
+
+Testing is crucial to ensure endpoints, schemas, and integrations work correctly.
+
+2. Automatic API Documentation
+Step 1: Create a Sample FastAPI App
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI(title="My FastAPI App", version="1.0.0")
+
+class User(BaseModel):
+    id: int
+    name: str
+    email: str
+
+fake_users_db = {}
+
+@app.post("/users", response_model=User)
+async def create_user(user: User):
+    if user.id in fake_users_db:
+        raise HTTPException(status_code=400, detail="User already exists")
+    fake_users_db[user.id] = user
+    return user
+
+@app.get("/users/{user_id}", response_model=User)
+async def get_user(user_id: int):
+    user = fake_users_db.get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+Step 2: Run FastAPI
+uvicorn main:app --reload
+
+Step 3: Access Documentation
+
+Swagger UI: http://127.0.0.1:8000/docs
+
+ReDoc: http://127.0.0.1:8000/redoc
+
+OpenAPI JSON: http://127.0.0.1:8000/openapi.json
+
+Features:
+
+Interactive form for sending requests
+
+View request/response schemas
+
+Execute endpoints without writing separate scripts
+
+3. Adding Metadata to Documentation
+app = FastAPI(
+    title="Advanced FastAPI App",
+    description="This is a detailed study reference for FastAPI",
+    version="2.0.0",
+    contact={
+        "name": "Yogeswaran S",
+        "email": "yogeswaran@example.com",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    }
+)
+
+
+Adds metadata visible in Swagger UI and ReDoc.
+
+Provides professional documentation for APIs.
+
+4. Tagging Endpoints
+@app.get("/users/{user_id}", response_model=User, tags=["Users"])
+async def get_user(user_id: int):
+    ...
+
+
+Tags help organize endpoints in the docs.
+
+Example: "Users", "Authentication", "Admin"
+
+5. Testing FastAPI Endpoints
+
+FastAPI uses Starlette’s TestClient, which allows testing APIs like a Python function.
+
+Step 1: Install Testing Dependencies
+pip install pytest httpx
+
+Step 2: Create Test File
+# test_main.py
+from fastapi.testclient import TestClient
+from main import app
+
+client = TestClient(app)
+
+def test_create_user():
+    response = client.post("/users", json={"id":1, "name":"Yogesh", "email":"yogesh@example.com"})
+    assert response.status_code == 200
+    assert response.json()["name"] == "Yogesh"
+
+def test_get_user():
+    response = client.get("/users/1")
+    assert response.status_code == 200
+    assert response.json()["email"] == "yogesh@example.com"
+
+def test_user_not_found():
+    response = client.get("/users/999")
+    assert response.status_code == 404
+
+Step 3: Run Tests
+pytest test_main.py --maxfail=1 --disable-warnings -q
+
+
+Checks that endpoints behave as expected
+
+Can integrate into CI/CD pipelines
+
+6. Tips & Best Practices
+
+Always add response_model to endpoints for proper documentation and validation.
+
+Use tags and descriptions for clarity in large APIs.
+
+Write tests for CRUD operations and authentication.
+
+Use TestClient for unit tests and httpx.AsyncClient for async tests.
+
+Combine docs and tests: your docs can also serve as examples for tests.
+
+Include example payloads in Pydantic models using example:
+
+class User(BaseModel):
+    id: int
+    name: str
+    email: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "Yogesh",
+                "email": "yogesh@example.com"
+            }
+        }
+
+7. Integrating Testing with JWT & Authenticated Endpoints
+def test_authenticated_endpoint():
+    token = "your_access_token"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.get("/protected-route", headers=headers)
+    assert response.status_code == 200
+
+
+Ensures authentication & role-based logic works correctly.
+
+✅ Summary:
+
+FastAPI auto-generates Swagger UI, ReDoc, and OpenAPI JSON.
+
+Metadata and tags enhance readability.
+
+TestClient and pytest enable testing endpoints programmatically.
+
+Integration with JWT and role-based routes is testable using headers.
+
+Do you want me to start combining all modules into one single, massive PDF-ready document next, so you have the entire FastAPI guide in one place?
